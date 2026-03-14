@@ -1,0 +1,661 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  ESTUDANTE
+  PROFESSOR
+}
+
+enum NivelEnsino {
+  ENSINO_PRIMARIO        // 1ª a 7ª classe
+  ENSINO_SECUNDARIO      // 8ª a 12ª classe
+}
+
+enum TipoConteudo {
+  LIVRO
+  MODULO
+  MATERIAL_COMPLEMENTAR
+  ARTIGO
+  VIDEO
+  EXERCICIO
+}
+
+enum StatusDuvida {
+  PENDENTE
+  EM_ANALISE
+  RESPONDIDA
+  FECHADA
+}
+
+enum TipoResposta {
+  PROFESSOR
+  ESTUDANTE
+  SISTEMA
+}
+
+enum DificuldadeQuestao {
+  FACIL
+  MEDIO
+  DIFICIL
+}
+
+enum TipoEscola {
+  PRIMARIA
+  SECUNDARIA
+  PRIMARIA_SECUNDARIA
+}
+
+enum NivelLocalizacao {
+  URBANA
+  SUBURBANA
+  RURAL
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String
+  emailVerified Boolean  @default(false)
+  image         String?
+  role          UserRole @default(USER)
+  bio           String?  @db.Text
+  finishedOnboarding Boolean @default(false)
+
+
+  // Relações
+  sessions  Session[]
+  accounts  Account[]
+  
+  // Relações SNAE
+  perfilEstudante PerfilEstudante?
+  perfilProfessor PerfilProfessor?
+  duvidasCriadas  Duvida[]         @relation("DuvidasCriadas")
+  respostas       Resposta[]
+  progressos      ProgressoEstudante[]
+  tentativasQuiz  TentativaQuiz[]
+  notificacoes    Notificacao[]
+  acessosOffline  AcessoOffline[]
+  conteudosCriados ConteudoEducacional[] @relation("ConteudosCriados")
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([email])
+  @@index([role])
+  @@index([deletedAt])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String   @db.VarChar(500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?  @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?   @db.VarChar(255)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ENUMS and MODELS for the System
+
+// ============================================
+// MODELOS DO SISTEMA SNAE
+// ============================================
+
+// Localização Geográfica - Moçambique
+model Provincia {
+  id        String     @id @default(uuid())
+  nome      String     @unique
+  codigo    String?    @unique
+  ordem     Int        @default(0)
+  
+  distritos Distrito[]
+  escolas   Escola[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ordem])
+  @@map("provincia")
+}
+
+model Distrito {
+  id          String    @id @default(uuid())
+  nome        String
+  provinciaId String
+  provincia   Provincia @relation(fields: [provinciaId], references: [id], onDelete: Cascade)
+  ordem       Int       @default(0)
+  
+  escolas     Escola[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provinciaId, nome])
+  @@index([provinciaId])
+  @@index([ordem])
+  @@map("distrito")
+}
+
+// Escolas
+model Escola {
+  id          String            @id @default(uuid())
+  nome        String
+  tipo        TipoEscola
+  codigo      String?           @unique
+  
+  // Localização
+  provinciaId String
+  provincia   Provincia         @relation(fields: [provinciaId], references: [id])
+  distritoId  String?
+  distrito    Distrito?         @relation(fields: [distritoId], references: [id])
+  cidade      String?
+  bairro      String?
+  endereco    String?           @db.Text
+  localizacao NivelLocalizacao  @default(URBANA)
+  
+  // Contato
+  telefone    String?
+  email       String?
+  website     String?
+  
+  // Status
+  ativa       Boolean           @default(true)
+  
+  // Relações
+  estudantes  PerfilEstudante[]
+  professores PerfilProfessor[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([provinciaId])
+  @@index([distritoId])
+  @@index([tipo])
+  @@index([ativa])
+  @@index([nome])
+  @@map("escola")
+}
+
+// Perfil específico para estudantes
+model PerfilEstudante {
+  id              String      @id @default(uuid())
+  userId          String      @unique
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nivelEnsino     NivelEnsino
+  anoEscolar      Int
+  escolaId        String?
+  escola          Escola?     @relation(fields: [escolaId], references: [id], onDelete: SetNull)
+  escolaManual    String?     // Caso a escola não esteja no sistema
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nivelEnsino])
+  @@index([anoEscolar])
+  @@index([escolaId])
+  @@map("perfil_estudante")
+}
+
+// Perfil específico para professores
+model PerfilProfessor {
+  id                String       @id @default(uuid())
+  userId            String       @unique
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  especialidade     String
+  escolaId          String?
+  escola            Escola?      @relation(fields: [escolaId], references: [id], onDelete: SetNull)
+  instituicao       String?
+  disciplinas       DisciplinaProfessor[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([escolaId])
+  @@map("perfil_professor")
+}
+
+// Áreas de conhecimento
+model AreaConhecimento {
+  id          String      @id @default(uuid())
+  nome        String
+  descricao   String?     @db.Text
+  icone       String?
+  cor         String?
+  ordem       Int         @default(0)
+  disciplinas Disciplina[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([nome])
+  @@index([ordem])
+  @@map("area_conhecimento")
+}
+
+// Disciplinas
+model Disciplina {
+  id                String              @id @default(uuid())
+  nome              String
+  descricao         String?             @db.Text
+  codigo            String?             @unique
+  nivelEnsino       NivelEnsino
+  areaConhecimentoId String
+  areaConhecimento  AreaConhecimento    @relation(fields: [areaConhecimentoId], references: [id])
+  icone             String?
+  cor               String?
+  ordem             Int                 @default(0)
+  
+  // Relações
+  conteudos         ConteudoEducacional[]
+  topicos           Topico[]
+  duvidas           Duvida[]
+  professores       DisciplinaProfessor[]
+  progressos        ProgressoEstudante[]
+  quizzes           Quiz[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nivelEnsino])
+  @@index([areaConhecimentoId])
+  @@index([ordem])
+  @@map("disciplina")
+}
+
+// Relação muitos-para-muitos entre Professor e Disciplina
+model DisciplinaProfessor {
+  id              String          @id @default(uuid())
+  professorId     String
+  professor       PerfilProfessor @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  disciplinaId    String
+  disciplina      Disciplina      @relation(fields: [disciplinaId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+
+  @@unique([professorId, disciplinaId])
+  @@index([professorId])
+  @@index([disciplinaId])
+  @@map("disciplina_professor")
+}
+
+// Tópicos dentro de uma disciplina
+model Topico {
+  id           String                @id @default(uuid())
+  nome         String
+  descricao    String?               @db.Text
+  disciplinaId String
+  disciplina   Disciplina            @relation(fields: [disciplinaId], references: [id], onDelete: Cascade)
+  ordem        Int                   @default(0)
+  
+  // Relações
+  conteudos    ConteudoEducacional[]
+  duvidas      Duvida[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([disciplinaId])
+  @@index([ordem])
+  @@map("topico")
+}
+
+// Biblioteca Digital - Conteúdos Educacionais
+model ConteudoEducacional {
+  id           String        @id @default(uuid())
+  titulo       String
+  descricao    String?       @db.Text
+  tipo         TipoConteudo
+  disciplinaId String
+  disciplina   Disciplina    @relation(fields: [disciplinaId], references: [id], onDelete: Cascade)
+  topicoId     String?
+  topico       Topico?       @relation(fields: [topicoId], references: [id], onDelete: SetNull)
+  
+  // Metadados do conteúdo
+  autor        String?
+  autorId      String?       // ID do usuário que criou o conteúdo
+  autorUser    User?         @relation("ConteudosCriados", fields: [autorId], references: [id], onDelete: SetNull)
+  editora      String?
+  anoPublicacao Int?
+  isbn         String?
+  
+  // Arquivo/URL
+  urlArquivo   String?       @db.Text
+  tamanhoArquivo BigInt?
+  formatoArquivo String?
+  
+  // Conteúdo textual (para busca e offline)
+  conteudoTexto String?      @db.LongText
+  
+  // Controle
+  publicado    Boolean       @default(false)
+  ordem        Int           @default(0)
+  visualizacoes Int          @default(0)
+  
+  // Relações
+  progressos   ProgressoEstudante[]
+  acessosOffline AcessoOffline[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([disciplinaId])
+  @@index([topicoId])
+  @@index([tipo])
+  @@index([publicado])
+  @@map("conteudo_educacional")
+}
+
+// Sistema de Dúvidas Académicas
+model Duvida {
+  id           String        @id @default(uuid())
+  titulo       String
+  descricao    String        @db.Text
+  disciplinaId String
+  disciplina   Disciplina    @relation(fields: [disciplinaId], references: [id], onDelete: Cascade)
+  topicoId     String?
+  topico       Topico?       @relation(fields: [topicoId], references: [id], onDelete: SetNull)
+  estudanteId  String
+  estudante    User          @relation("DuvidasCriadas", fields: [estudanteId], references: [id], onDelete: Cascade)
+  status       StatusDuvida  @default(PENDENTE)
+  
+  // Anexos
+  anexos       String?       @db.Text // JSON array de URLs
+  
+  // Relações
+  respostas    Resposta[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([disciplinaId])
+  @@index([topicoId])
+  @@index([estudanteId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("duvida")
+}
+
+// Respostas às dúvidas
+model Resposta {
+  id          String        @id @default(uuid())
+  conteudo    String        @db.Text
+  duvidaId    String
+  duvida      Duvida        @relation(fields: [duvidaId], references: [id], onDelete: Cascade)
+  autorId     String
+  autor       User          @relation(fields: [autorId], references: [id], onDelete: Cascade)
+  tipo        TipoResposta
+  
+  // Validação
+  melhorResposta Boolean    @default(false)
+  likes       Int           @default(0)
+  
+  // Anexos
+  anexos      String?       @db.Text // JSON array de URLs
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([duvidaId])
+  @@index([autorId])
+  @@index([tipo])
+  @@index([melhorResposta])
+  @@map("resposta")
+}
+
+// Sistema de Quizzes e Avaliações
+model Quiz {
+  id           String        @id @default(uuid())
+  titulo       String
+  descricao    String?       @db.Text
+  disciplinaId String
+  disciplina   Disciplina    @relation(fields: [disciplinaId], references: [id], onDelete: Cascade)
+  
+  tempoLimite  Int?          // em minutos
+  notaMinima   Float?
+  tentativasPermitidas Int?
+  embaralharQuestoes Boolean @default(true)
+  mostrarResultado Boolean   @default(true)
+  
+  // Controle
+  publicado    Boolean       @default(false)
+  
+  // Relações
+  questoes     Questao[]
+  tentativas   TentativaQuiz[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([disciplinaId])
+  @@index([publicado])
+  @@map("quiz")
+}
+
+// Questões dos quizzes
+model Questao {
+  id          String              @id @default(uuid())
+  quizId      String
+  quiz        Quiz                @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  enunciado   String              @db.Text
+  tipo        String              // MULTIPLA_ESCOLHA, VERDADEIRO_FALSO, DISSERTATIVA
+  dificuldade DificuldadeQuestao  @default(MEDIO)
+  pontos      Float               @default(1)
+  ordem       Int                 @default(0)
+  
+  // Opções (JSON para flexibilidade)
+  opcoes      String?             @db.Text // JSON array
+  respostaCorreta String?         @db.Text // JSON
+  explicacao  String?             @db.Text
+  
+  // Relações
+  respostasEstudante RespostaQuestao[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([quizId])
+  @@index([ordem])
+  @@map("questao")
+}
+
+// Tentativas de quiz pelos estudantes
+model TentativaQuiz {
+  id          String            @id @default(uuid())
+  quizId      String
+  quiz        Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  estudanteId String
+  estudante   User              @relation(fields: [estudanteId], references: [id], onDelete: Cascade)
+  
+  // Resultado
+  nota        Float?
+  notaMaxima  Float
+  percentual  Float?
+  aprovado    Boolean?
+  
+  // Controle
+  iniciado    DateTime          @default(now())
+  finalizado  DateTime?
+  tempoGasto  Int?              // em segundos
+  
+  // Relações
+  respostas   RespostaQuestao[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([quizId])
+  @@index([estudanteId])
+  @@index([iniciado])
+  @@map("tentativa_quiz")
+}
+
+// Respostas individuais às questões
+model RespostaQuestao {
+  id          String        @id @default(uuid())
+  tentativaId String
+  tentativa   TentativaQuiz @relation(fields: [tentativaId], references: [id], onDelete: Cascade)
+  questaoId   String
+  questao     Questao       @relation(fields: [questaoId], references: [id], onDelete: Cascade)
+  
+  // Resposta do estudante
+  resposta    String        @db.Text // JSON
+  correta     Boolean?
+  pontos      Float         @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tentativaId])
+  @@index([questaoId])
+  @@map("resposta_questao")
+}
+
+// Progresso do estudante
+model ProgressoEstudante {
+  id          String              @id @default(uuid())
+  estudanteId String
+  estudante   User                @relation(fields: [estudanteId], references: [id], onDelete: Cascade)
+  disciplinaId String
+  disciplina  Disciplina          @relation(fields: [disciplinaId], references: [id], onDelete: Cascade)
+  conteudoId  String?
+  conteudo    ConteudoEducacional? @relation(fields: [conteudoId], references: [id], onDelete: SetNull)
+  
+  // Progresso
+  percentualConclusao Float @default(0)
+  tempoEstudo Int       @default(0) // em minutos
+  ultimoAcesso DateTime @default(now())
+  concluido   Boolean   @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([estudanteId, disciplinaId, conteudoId])
+  @@index([estudanteId])
+  @@index([disciplinaId])
+  @@index([conteudoId])
+  @@map("progresso_estudante")
+}
+
+// Acesso offline - controle de conteúdos baixados
+model AcessoOffline {
+  id          String              @id @default(uuid())
+  estudanteId String
+  estudante   User                @relation(fields: [estudanteId], references: [id], onDelete: Cascade)
+  conteudoId  String
+  conteudo    ConteudoEducacional @relation(fields: [conteudoId], references: [id], onDelete: Cascade)
+  
+  // Controle
+  baixadoEm   DateTime            @default(now())
+  ultimoAcesso DateTime           @default(now())
+  expiracao   DateTime?
+  ativo       Boolean             @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([estudanteId, conteudoId])
+  @@index([estudanteId])
+  @@index([conteudoId])
+  @@index([ativo])
+  @@map("acesso_offline")
+}
+
+// Sistema de notificações
+model Notificacao {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Conteúdo
+  titulo      String
+  mensagem    String   @db.Text
+  tipo        String   // DUVIDA, RESPOSTA, QUIZ, SISTEMA
+  
+  // Referência
+  referenciaId String?
+  referenciaUrl String?
+  
+  // Controle
+  lida        Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([lida])
+  @@index([createdAt])
+  @@map("notificacao")
+}
+
+// Logs de atividade do sistema (para monitoria)
+model LogAtividade {
+  id          String   @id @default(uuid())
+  userId      String?
+  acao        String
+  entidade    String?
+  entidadeId  String?
+  detalhes    String?  @db.Text // JSON
+  ipAddress   String?
+  userAgent   String?  @db.Text
+  
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([acao])
+  @@index([entidade])
+  @@index([createdAt])
+  @@map("log_atividade")
+}

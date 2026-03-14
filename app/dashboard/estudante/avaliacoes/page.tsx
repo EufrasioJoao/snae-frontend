@@ -1,0 +1,11 @@
+import { Metadata } from 'next'
+import AvaliacoesClient from './avaliacoes-client'
+
+export const metadata: Metadata = {
+  title: 'Avaliações | SNAE',
+  description: 'Realize quizzes e avaliações das suas disciplinas'
+}
+
+export default function AvaliacoesPage() {
+  return <AvaliacoesClient />
+}

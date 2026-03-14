@@ -1,0 +1,22 @@
+{
+  "name": "SNAE - Sistema Nacional de Aprendizagem ao Estudante",
+  "short_name": "SNAE",
+  "description": "Plataforma educacional digital inclusiva para estudantes do ensino secundário. Acesse conteúdos educacionais, tire dúvidas e prepare-se para exames.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
