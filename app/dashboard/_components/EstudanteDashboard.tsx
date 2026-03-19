@@ -244,6 +244,13 @@ export default function EstudanteDashboard({ user }: EstudanteDashboardProps) {
               </Button>
             </Link>
             
+            <Link href="/dashboard/estudante/assistente">
+              <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
+                <Flame className="h-5 w-5" />
+                Assistente IA
+              </Button>
+            </Link>
+            
             <Link href="/dashboard/estudante/duvidas">
               <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
                 <MessageSquare className="h-5 w-5" />

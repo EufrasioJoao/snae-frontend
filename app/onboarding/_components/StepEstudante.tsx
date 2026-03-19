@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { OnboardingData } from "../onboarding-client";
-import EscolaSelector from "./EscolaSelector";
 
 interface StepEstudanteProps {
   data: OnboardingData;
@@ -34,12 +33,6 @@ export default function StepEstudante({ data, updateData, onBack, onComplete, is
     if (validate()) {
       onComplete();
     }
-  };
-
-  const getTipoEscola = () => {
-    if (data.nivelEnsino === "ENSINO_PRIMARIO") return "PRIMARIA";
-    if (data.nivelEnsino === "ENSINO_SECUNDARIO") return "SECUNDARIA";
-    return "PRIMARIA_SECUNDARIA";
   };
 
   return (
@@ -111,21 +104,6 @@ export default function StepEstudante({ data, updateData, onBack, onComplete, is
         {errors.anoEscolar && (
           <p className="text-sm text-red-600 mt-1">{errors.anoEscolar}</p>
         )}
-      </div>
-
-      {/* Escola */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Escola (Opcional)
-        </label>
-        <EscolaSelector
-          value={data.escolaId}
-          manualValue={data.escolaManual}
-          onChange={(escolaId, escolaManual) => {
-            updateData({ escolaId, escolaManual });
-          }}
-          tipoEscola={getTipoEscola() as any}
-        />
       </div>
 
       <div className="flex justify-between pt-4">

@@ -565,6 +565,16 @@ const apiRequests = {
       });
       return response.data;
     },
+    
+    // Assistente IA
+    chatAssistente: async (data: {
+      disciplinaId: string;
+      mensagem: string;
+      historico?: Array<{ role: string; content: string }>;
+    }) => {
+      const response = await api.post("/api/estudante/assistente/chat", data);
+      return response.data;
+    },
   },
 
 };

@@ -26,11 +26,8 @@ export type OnboardingData = {
   // Estudante
   nivelEnsino?: "ENSINO_PRIMARIO" | "ENSINO_SECUNDARIO";
   anoEscolar?: number;
-  escolaId?: string;
-  escolaManual?: string;
   // Professor
   especialidade?: string;
-  instituicao?: string;
   disciplinaIds?: string[];
 };
 

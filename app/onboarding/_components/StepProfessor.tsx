@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { OnboardingData } from "../onboarding-client";
-import EscolaSelector from "./EscolaSelector";
 
 interface StepProfessorProps {
   data: OnboardingData;
@@ -63,21 +62,6 @@ export default function StepProfessor({ data, updateData, onBack, onComplete, is
         <p className="text-xs text-gray-500 mt-1">
           Informe a principal área em que você leciona
         </p>
-      </div>
-
-      {/* Escola */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Escola / Instituição (Opcional)
-        </label>
-        <EscolaSelector
-          value={data.escolaId}
-          manualValue={data.instituicao}
-          onChange={(escolaId, escolaManual) => {
-            updateData({ escolaId, instituicao: escolaManual });
-          }}
-          tipoEscola="PRIMARIA_SECUNDARIA"
-        />
       </div>
 
       {/* Info Box */}

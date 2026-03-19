@@ -76,6 +76,12 @@ const Sidebar = () => {
       roles: ["ESTUDANTE"],
       links: [
         {
+          name: "Assistente IA",
+          href: "/dashboard/estudante/assistente",
+          icon: <GraduationCap size={20} />,
+          roles: ["ESTUDANTE"],
+        },
+        {
           name: "Biblioteca",
           href: "/dashboard/estudante/biblioteca",
           icon: <Library size={20} />,
