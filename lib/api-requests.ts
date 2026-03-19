@@ -405,6 +405,19 @@ const apiRequests = {
       const response = await api.post(`/api/professor/quizzes/${quizId}/questoes`, data);
       return response.data;
     },
+
+    // Dashboard
+    getDashboardStats: async () => {
+      const response = await api.get("/api/professor/dashboard/stats");
+      return response.data;
+    },
+
+    getRecentActivities: async (limit?: number) => {
+      const response = await api.get("/api/professor/dashboard/activities", {
+        params: { limit }
+      });
+      return response.data;
+    },
   },
 
   estudante: {
@@ -573,6 +586,32 @@ const apiRequests = {
       historico?: Array<{ role: string; content: string }>;
     }) => {
       const response = await api.post("/api/estudante/assistente/chat", data);
+      return response.data;
+    },
+
+    // Dashboard
+    getDashboardStats: async () => {
+      const response = await api.get("/api/estudante/dashboard/stats");
+      return response.data;
+    },
+
+    getQuizzesPendentes: async (limit?: number) => {
+      const response = await api.get("/api/estudante/dashboard/quizzes-pendentes", {
+        params: { limit }
+      });
+      return response.data;
+    },
+  },
+
+  admin: {
+    getDashboardStats: async () => {
+      const response = await api.get("/api/admin/dashboard/stats");
+      return response.data;
+    },
+    getRecentActivities: async (limit?: number) => {
+      const response = await api.get("/api/admin/dashboard/activities", {
+        params: { limit }
+      });
       return response.data;
     },
   },

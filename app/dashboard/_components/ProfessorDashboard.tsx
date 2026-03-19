@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { User } from "@/types";
+import apiRequests from "@/lib/api-requests";
 
 interface ProfessorStats {
   totalDisciplinas: number;
@@ -53,37 +54,21 @@ export default function ProfessorDashboard({ user }: ProfessorDashboardProps) {
     try {
       setLoading(true);
       
-      // Mock data por enquanto - implementar APIs depois
-      const mockStats: ProfessorStats = {
-        totalDisciplinas: 3,
-        totalDuvidas: 15,
-        totalConteudos: 8,
-        totalQuizzes: 5,
-        duvidasPendentes: 3,
-        conteudosPendentes: 2,
-        estudantesAtivos: 45,
-        mediaRespostas: 2.5
-      };
+      // Buscar dados reais do servidor
+      const [statsResponse, activitiesResponse] = await Promise.all([
+        apiRequests.professor.getDashboardStats(),
+        apiRequests.professor.getRecentActivities(10)
+      ]);
 
-      const mockAtividades: AtividadeRecente[] = [
-        {
-          id: '1',
-          tipo: 'DUVIDA',
-          titulo: 'Dúvida sobre equações do 2º grau',
-          data: new Date().toISOString(),
-          status: 'PENDENTE'
-        },
-        {
-          id: '2',
-          tipo: 'CONTEUDO',
-          titulo: 'Material sobre Álgebra Linear',
-          data: new Date(Date.now() - 86400000).toISOString(),
-          status: 'APROVADO'
-        }
-      ];
+      if (statsResponse.success) {
+        setStats(statsResponse.stats);
+      } else {
+        toast.error("Erro ao carregar estatísticas");
+      }
 
-      setStats(mockStats);
-      setAtividades(mockAtividades);
+      if (activitiesResponse.success) {
+        setAtividades(activitiesResponse.activities);
+      }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast.error("Erro ao carregar dashboard");

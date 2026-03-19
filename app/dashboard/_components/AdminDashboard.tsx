@@ -65,50 +65,21 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     try {
       setLoading(true);
       
-      // Por enquanto, usar dados mock até implementar as APIs
-      const mockStats: AdminStats = {
-        totalUsuarios: 1247,
-        usuariosAtivos: 892,
-        totalDisciplinas: 32,
-        totalConteudos: 156,
-        conteudosPendentes: 8,
-        totalQuizzes: 89,
-        atividadeRecente: {
-          novosUsuarios: 23,
-          conteudosAdicionados: 12,
-          quizzesRealizados: 145
-        }
-      };
+      // Buscar estatísticas reais do servidor
+      const [statsResponse, activitiesResponse] = await Promise.all([
+        apiRequests.admin.getDashboardStats(),
+        apiRequests.admin.getRecentActivities(10)
+      ]);
+      
+      if (statsResponse.success) {
+        setStats(statsResponse.stats);
+      } else {
+        toast.error("Erro ao carregar estatísticas");
+      }
 
-      const mockAtividades: AtividadeRecente[] = [
-        {
-          id: '1',
-          tipo: 'USER',
-          titulo: 'Novo usuário registrado',
-          usuario: 'João Silva',
-          data: new Date().toISOString(),
-          status: 'ATIVO'
-        },
-        {
-          id: '2',
-          tipo: 'CONTENT',
-          titulo: 'Conteúdo enviado para aprovação',
-          usuario: 'Prof. Maria Santos',
-          data: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          status: 'PENDENTE'
-        },
-        {
-          id: '3',
-          tipo: 'QUIZ',
-          titulo: 'Quiz de Matemática criado',
-          usuario: 'Prof. Carlos Lima',
-          data: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          status: 'PUBLICADO'
-        }
-      ];
-
-      setStats(mockStats);
-      setAtividades(mockAtividades);
+      if (activitiesResponse.success) {
+        setAtividades(activitiesResponse.activities);
+      }
     } catch (error) {
       console.error("Erro ao carregar dados do dashboard:", error);
       toast.error("Erro ao carregar dados do dashboard");

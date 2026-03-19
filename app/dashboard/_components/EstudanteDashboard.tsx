@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { User } from "@/types";
+import apiRequests from "@/lib/api-requests";
 
 interface EstudanteStats {
   totalDisciplinas: number;
@@ -64,54 +65,35 @@ export default function EstudanteDashboard({ user }: EstudanteDashboardProps) {
     try {
       setLoading(true);
       
-      // Mock data por enquanto - implementar APIs depois
-      const mockStats: EstudanteStats = {
-        totalDisciplinas: 6,
-        quizzesRealizados: 8,
-        quizzesPendentes: 4,
-        mediaGeral: 16.5,
-        tempoEstudo: 1200, // em minutos
-        sequenciaAtual: 5,
-        nivel: 3,
-        pontosTotal: 1250,
-        proximoNivel: 1500
-      };
+      // Buscar dados reais do servidor
+      const [statsResponse, quizzesResponse, conquistasResponse] = await Promise.all([
+        apiRequests.estudante.getDashboardStats(),
+        apiRequests.estudante.getQuizzesPendentes(2),
+        apiRequests.estudante.getConquistas().catch(() => ({ success: false, conquistas: [] }))
+      ]);
 
-      const mockQuizzes: QuizPendente[] = [
-        {
-          id: '1',
-          titulo: 'Álgebra Linear - Teste 2',
-          disciplina: 'Matemática',
-          questoes: 10,
-          tempoLimite: 30
-        },
-        {
-          id: '2',
-          titulo: 'Literatura Moçambicana',
-          disciplina: 'Português',
-          questoes: 15,
-          tempoLimite: 45
-        }
-      ];
+      if (statsResponse.success) {
+        setStats(statsResponse.stats);
+      } else {
+        toast.error("Erro ao carregar estatísticas");
+      }
 
-      const mockConquistas: ConquistaRecente[] = [
-        {
-          id: '1',
-          nome: 'Primeira Aprovação',
-          icone: 'trophy',
-          dataDesbloqueio: new Date().toISOString()
-        },
-        {
-          id: '2',
-          nome: 'Sequência de 5 dias',
-          icone: 'flame',
-          dataDesbloqueio: new Date(Date.now() - 86400000).toISOString()
-        }
-      ];
+      if (quizzesResponse.success) {
+        setQuizzesPendentes(quizzesResponse.quizzes);
+      }
 
-      setStats(mockStats);
-      setQuizzesPendentes(mockQuizzes);
-      setConquistasRecentes(mockConquistas);
+      if (conquistasResponse.success && conquistasResponse.conquistas) {
+        // Pegar as 2 conquistas mais recentes
+        const recentes = conquistasResponse.conquistas
+          .slice(0, 2)
+          .map((c: any) => ({
+            id: c.id,
+            nome: c.nome,
+            icone: c.icone || 'trophy',
+            dataDesbloqueio: c.dataDesbloqueio || new Date().toISOString()
+          }));
+        setConquistasRecentes(recentes);
+      }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast.error("Erro ao carregar dashboard");
